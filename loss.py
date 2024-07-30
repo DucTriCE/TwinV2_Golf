@@ -41,7 +41,6 @@ class TotalLoss(nn.Module):
 
         _,seg_ll= torch.max(seg_ll, 1)
         seg_ll=seg_ll.cuda()
-        print(seg_da.shape, out_da.shape)
         
         tversky_da_loss,tversky_ll_loss = self.seg_tver_da(out_da, seg_da), self.seg_tver_ll(out_ll, seg_ll)
         focal_da_loss, focal_ll_loss = self.seg_focal(out_da, seg_da),self.seg_focal(out_ll, seg_ll)
@@ -67,10 +66,9 @@ class TotalLossDA(nn.Module):
         self.seg_focal = FocalLossSeg(mode="multiclass", alpha=alpha3, gamma=gamma3)
 
 
-
     def forward(self, outputs, targets):
         
-        seg_da=targets[0]
+        seg_da=targets
         out_da=outputs
         if not self.is320:
             out_da=out_da[:,:,12:-12]
@@ -370,7 +368,6 @@ class DiceLoss(_Loss):
         self.ignore_index = ignore_index
 
     def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
-
         assert y_true.size(0) == y_pred.size(0)
 
         if self.from_logits:

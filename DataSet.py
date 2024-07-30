@@ -89,7 +89,7 @@ def random_perspective(combination,  degrees=10, translate=.1, scale=.1, shear=1
     """combination of img transform"""
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # targets = [cls, xyxy]
-    img, gray, line = combination
+    img, gray = combination
     height = img.shape[0] + border[0] * 2  # shape(h,w,c)
     width = img.shape[1] + border[1] * 2
 
@@ -127,15 +127,11 @@ def random_perspective(combination,  degrees=10, translate=.1, scale=.1, shear=1
         if perspective:
             img = cv2.warpPerspective(img, M, dsize=(width, height), borderValue=(114, 114, 114))
             gray = cv2.warpPerspective(gray, M, dsize=(width, height), borderValue=0)
-            line = cv2.warpPerspective(line, M, dsize=(width, height), borderValue=0)
         else:  # affine
             img = cv2.warpAffine(img, M[:2], dsize=(width, height), borderValue=(114, 114, 114))
             gray = cv2.warpAffine(gray, M[:2], dsize=(width, height), borderValue=0)
-            line = cv2.warpAffine(line, M[:2], dsize=(width, height), borderValue=0)
 
-
-
-    combination = (img, gray, line)
+    combination = (img, gray)
     return combination
 
 
@@ -169,10 +165,10 @@ class Dataset(torch.utils.data.Dataset):
         self.Tensor = transforms.ToTensor()
         self.valid=valid
         if valid:
-            self.root='../bdd100k/images/val'
+            self.root='/home/ceec/huycq/TwinVast_1/bdd100k/images/val'
             self.names=os.listdir(self.root)
         else:
-            self.root='../bdd100k/images/train'
+            self.root='/home/ceec/huycq/TwinVast_1/bdd100k/images/train'
             self.names=os.listdir(self.root)
 
     def __len__(self):
@@ -194,14 +190,11 @@ class Dataset(torch.utils.data.Dataset):
             image = cv2.imread(os.path.join(self.root,self.names[idx]))
         
         label1 = cv2.imread(image_name.replace("images","segments").replace("jpg","png"), 0)
-        label2 = cv2.imread(image_name.replace("images","lane").replace("jpg","png"), 0)
         
-
-
         if not self.valid:
             if random.random() < self.prob_perspective:
-                combination = (image, label1, label2)
-                (image, label1, label2)= random_perspective(
+                combination = (image, label1)
+                (image, label1)= random_perspective(
                     combination=combination,
                     degrees=self.degrees,
                     translate=self.translate,
@@ -213,48 +206,36 @@ class Dataset(torch.utils.data.Dataset):
             if random.random() < self.prob_flip:
                 image = np.fliplr(image)
                 label1 = np.fliplr(label1)
-                label2 = np.fliplr(label2)
             
             if random.random() < self.prob_bilateral:
                 image = RandomBilateralBlur(image)
             if random.random() < self.prob_gaussian:
                 image = RandomGaussianBlur(image)
             if random.random() < self.prob_crop:
-                masks = np.stack([label1, label2],axis=2)
+                masks = label1
                 transformed = self.Random_Crop(image=image, mask=masks)
                 image = transformed['image']
-                labels = transformed['mask']
-                label1 = labels[:,:,0]
-                label2 = labels[:,:,1]
-
+                label1 = transformed['mask']
 
             image = letterbox(image, (H_, W_))
         else:
             image = letterbox(image, (H_, W_))
 
         label1 = cv2.resize(label1, (W_, 360))
-        label2 = cv2.resize(label2, (W_, 360))
         
 
-
         _,seg_b1 = cv2.threshold(label1,1,255,cv2.THRESH_BINARY_INV)
-        _,seg_b2 = cv2.threshold(label2,1,255,cv2.THRESH_BINARY_INV)
         _,seg1 = cv2.threshold(label1,1,255,cv2.THRESH_BINARY)
-        _,seg2 = cv2.threshold(label2,1,255,cv2.THRESH_BINARY)
 
         seg1 = self.Tensor(seg1)
-        seg2 = self.Tensor(seg2)
         seg_b1 = self.Tensor(seg_b1)
-        seg_b2 = self.Tensor(seg_b2)
         seg_da = torch.stack((seg_b1[0], seg1[0]),0)
-        seg_ll = torch.stack((seg_b2[0], seg2[0]),0)
+        
         image = np.array(image)
         image = image[:, :, ::-1].transpose(2, 0, 1)
         image = np.ascontiguousarray(image)
-
-
        
-        return image_name,torch.from_numpy(image),(seg_da,seg_ll)
+        return image_name,torch.from_numpy(image),(seg_da)
 
 class Dataset320(torch.utils.data.Dataset):
     '''

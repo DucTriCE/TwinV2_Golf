@@ -78,6 +78,7 @@ def train_net(args, hyp):
 
     if args.seda:
         from loss import TotalLossDA
+        print("ONLY DRIVABLE")
         criteria = TotalLossDA(hyp, is320=args.is320)
     elif args.sell:
         from loss import TotalLossLL
@@ -109,7 +110,7 @@ def train_net(args, hyp):
             print("=> no checkpoint found at '{}'".format(args.resume))
 
     scaler = torch.cuda.amp.GradScaler()
-    
+    da_segment_results,ll_segment_results = val(valLoader, ema.ema if use_ema else model,is320=args.is320,args=args) #da_mIoU_seg, ll_IoU_seg
     for epoch in range(start_epoch, args.max_epochs):
 
         model_file_name = args.savedir + os.sep + 'model_{}.pth'.format(epoch)
@@ -151,7 +152,7 @@ if __name__ == '__main__':
 
     parser = ArgumentParser()
     parser.add_argument('--max_epochs', type=int, default=100, help='Max. number of epochs')
-    parser.add_argument('--num_workers', type=int, default=12, help='No. of parallel threads')
+    parser.add_argument('--num_workers', type=int, default=16, help='No. of parallel threads')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     parser.add_argument('--savedir', default='./test_full_', help='directory to save the results')
     parser.add_argument('--hyp', type=str, default='./hyperparameters/twinlitev2_hyper.yaml', help='hyperparameters path')
@@ -161,7 +162,7 @@ if __name__ == '__main__':
     parser.add_argument('--is320', action='store_true')
     parser.add_argument('--seda', action='store_true', help='sigle encoder for Drivable Segmentation')
     parser.add_argument('--sell', action='store_true', help='sigle encoder for Lane Segmentation')
-    parser.add_argument('--verbose', action='store_true', help='')
+    parser.add_argument('--verbose', action='store_false', help='')
     parser.add_argument('--ema', action='store_true', help='')
     args = parser.parse_args()
     with open(args.hyp, errors='ignore') as f:

@@ -151,8 +151,6 @@ def train(args, train_loader, model, criterion, optimizer, epoch,scaler,verbose=
 def val(val_loader = None, model = None, half = False, is320=False, args=None):
 
     model.eval()
-
-
     DA=SegmentationMetric(2)
     LL=SegmentationMetric(2)
 
@@ -187,7 +185,7 @@ def val(val_loader = None, model = None, half = False, is320=False, args=None):
             else:
                 out_da = output[0]
 
-            target_da = target[0]
+            target_da = target
             if is320:
                 out_da=torch.nn.functional.interpolate(out_da, scale_factor=2, mode='bilinear', align_corners=True)
 
